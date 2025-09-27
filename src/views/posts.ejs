@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media - Posts</title>
+  <!-- Importar Materialize CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <!-- Iconos de Google -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    .post-image { height: 200px; object-fit: cover; }
+    .card-title { font-weight: 600; }
+  </style>
+  </head>
+<body class="grey lighten-4">
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="/" class="brand-logo center">Social Media</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="row" style="margin-top: 20px;">
+      <div class="col s12 right-align">
+        <a id="create-post-btn" href="#editPostModal" class="btn teal modal-trigger">
+          <i class="material-icons left">add</i> Crear Post
+        </a>
+      </div>
+    </div>
+    <!-- INICIO POSTS -->
+    <% if (posts && posts.length) { %>
+      <div class="row">
+        <% posts.forEach(function(post){ %>
+          <div class="col s12 m6 l4">
+            <div class="card">
+              <div class="card-image">
+                <img class="post-image" src="<%= post.imageUrl || 'https://via.placeholder.com/600x400?text=Sin+imagen' %>" alt="Post">
+              </div>
+              <div class="card-content">
+                <span class="card-title truncate" title="<%= post.title %>"><%= post.title %></span>
+                <p><%= post.content %></p>
+                <% if (post.hashtags && post.hashtags.length) { %>
+                  <p style="margin-top: 10px">
+                    <strong>Hashtags:</strong>
+                    <% post.hashtags.forEach(function(tag){ %>
+                      <span class="chip"><%= (typeof tag === 'string' && tag.startsWith('#')) ? tag : '#' + tag %></span>
+                    <% }) %>
+                  </p>
+                <% } %>
+              </div>
+              <div class="card-action" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>
+                  <strong>Autor:</strong>
+                  <%= post.user ? ((post.user.name || '') + ' ' + (post.user.lastName || '')).trim() || (post.user.email || 'Anónimo') : 'Anónimo' %>
+                </span>
+                <div class="right">
+                  <a href="#editPostModal" class="btn-flat btn-edit-post modal-trigger" title="Editar"
+                     data-id="<%= post._id %>"
+                     data-title="<%= post.title %>"
+                     data-content="<%- post.content %>"
+                     data-imageurl="<%= post.imageUrl || '' %>"
+                     data-hashtags="<%= (post.hashtags || []).join(', ') %>">
+                    <i class="material-icons teal-text">edit</i>
+                  </a>
+                  <a href="#!" class="btn-flat btn-delete-post" data-id="<%= post._id %>" title="Eliminar"><i class="material-icons red-text">delete</i></a>
+                </div>
+              </div>
+              <div class="card-action grey lighten-4" style="font-size:12px; color:#555">
+                <span>Creado: <%= post.createdAt ? new Date(post.createdAt).toLocaleString() : '-' %></span>
+                <% if (post.updatedAt) { %>
+                  <span class="right">Actualizado: <%= new Date(post.updatedAt).toLocaleString() %></span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="card-panel yellow lighten-4 yellow-text text-darken-4">
+        No hay posts para mostrar.
+      </div>
+    <% } %>
+    <!-- FIN POSTS -->
+  </div>
+
+  <!-- Importar Materialize JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  
+  <!-- Modal crear/editar post -->
+  <div id="editPostModal" class="modal">
+    <div class="modal-content">
+      <h5 id="modal-title-text">Editar Post</h5>
+      <form id="edit-post-form" onsubmit="return enviarEdicion(event)">
+        <input type="hidden" id="edit-post-id" />
+        <div class="row">
+          <div class="input-field col s12 m6">
+            <input id="edit-title" type="text" minlength="5" maxlength="30" required />
+            <label for="edit-title" class="active">Título</label>
+          </div>
+          <div class="input-field col s12 m6">
+            <input id="edit-imageUrl" type="url" />
+            <label for="edit-imageUrl" class="active">Imagen (URL)</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="input-field col s12">
+            <textarea id="edit-content" class="materialize-textarea" minlength="10" required></textarea>
+            <label for="edit-content" class="active">Contenido</label>
+          </div>
+        </div>
+        <div id="modal-author-field" class="row" style="display:none;">
+          <div class="input-field col s12 m6">
+            <select id="modal-userId">
+              <option value="" disabled selected>Selecciona un autor</option>
+              <% if (typeof users !== 'undefined' && users && users.length) { %>
+                <% users.forEach(function(u){ %>
+                  <option value="<%= u._id %>"><%= (u.name || '') + ' ' + (u.lastName || '') %> (<%= u.email %>)</option>
+                <% }) %>
+              <% } %>
+            </select>
+            <label for="modal-userId">Autor</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="input-field col s12">
+            <input id="edit-hashtags" type="text" placeholder="#tag1, #tag2" />
+            <label for="edit-hashtags" class="active">Hashtags (separados por coma)</label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col s12 right-align">
+            <a href="#!" class="modal-close btn-flat">Cancelar</a>
+            <button id="modal-submit-btn" type="submit" class="btn teal">Guardar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'edit'; // 'edit' | 'create'
+    document.addEventListener('DOMContentLoaded', function() {
+      const selects = document.querySelectorAll('select');
+      M.FormSelect.init(selects);
+
+      const modals = document.querySelectorAll('.modal');
+      M.Modal.init(modals);
+
+      // Rellenar modal con datos del post al hacer clic en editar
+      document.querySelectorAll('.btn-edit-post').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentMode = 'edit';
+          document.getElementById('modal-title-text').textContent = 'Editar Post';
+          document.getElementById('modal-submit-btn').textContent = 'Guardar';
+          document.getElementById('modal-author-field').style.display = 'none';
+          const id = btn.getAttribute('data-id');
+          const title = btn.getAttribute('data-title') || '';
+          const content = btn.getAttribute('data-content') || '';
+          const imageUrl = btn.getAttribute('data-imageurl') || '';
+          const hashtags = btn.getAttribute('data-hashtags') || '';
+
+          document.getElementById('edit-post-id').value = id;
+          document.getElementById('edit-title').value = title;
+          document.getElementById('edit-content').value = content;
+          document.getElementById('edit-imageUrl').value = imageUrl;
+          document.getElementById('edit-hashtags').value = hashtags;
+
+          M.updateTextFields();
+        });
+      });
+
+      // Crear nuevo post: reutiliza el mismo modal
+      const createBtn = document.getElementById('create-post-btn');
+      if(createBtn){
+        createBtn.addEventListener('click', () => {
+          currentMode = 'create';
+          document.getElementById('modal-title-text').textContent = 'Crear Post';
+          document.getElementById('modal-submit-btn').textContent = 'Publicar';
+          document.getElementById('modal-author-field').style.display = 'block';
+
+          document.getElementById('edit-post-id').value = '';
+          document.getElementById('edit-title').value = '';
+          document.getElementById('edit-content').value = '';
+          document.getElementById('edit-imageUrl').value = '';
+          document.getElementById('edit-hashtags').value = '';
+
+          const userSelect = document.getElementById('modal-userId');
+          if(userSelect){
+            userSelect.selectedIndex = 0; // opción placeholder
+            M.FormSelect.init(userSelect);
+          }
+          M.updateTextFields();
+        });
+      }
+
+      // Eliminar post
+      document.querySelectorAll('.btn-delete-post').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          if(!id) return;
+          if(!confirm('¿Eliminar este post?')) return;
+          btn.setAttribute('disabled', 'disabled');
+          fetch(`/posts/${id}`, { method: 'DELETE' })
+            .then(async (res) => {
+              if(!res.ok){
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || 'Error al eliminar el post');
+              }
+            })
+            .then(() => window.location.reload())
+            .catch(err => {
+              btn.removeAttribute('disabled');
+              M.toast({html: err.message});
+            });
+        });
+      });
+    });
+
+    // Envío del modal (crear/editar)
+
+    function enviarEdicion(event){
+      event.preventDefault();
+      const id = document.getElementById('edit-post-id').value;
+      const title = document.getElementById('edit-title').value.trim();
+      const content = document.getElementById('edit-content').value.trim();
+      const imageUrl = document.getElementById('edit-imageUrl').value.trim();
+      const hashtagsInput = document.getElementById('edit-hashtags').value.trim();
+      const hashtags = hashtagsInput
+        ? hashtagsInput.split(',').map(t => t.trim()).filter(Boolean).map(t => t.startsWith('#') ? t.slice(1) : t)
+        : [];
+
+      if(currentMode === 'create'){
+        const userSelect = document.getElementById('modal-userId');
+        const userId = userSelect ? userSelect.value : '';
+        if(!userId){
+          M.toast({html: 'Selecciona un autor'});
+          return false;
+        }
+        fetch(`/posts/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content, imageUrl: imageUrl || undefined, hashtags })
+        })
+        .then(async (res) => {
+          if(!res.ok){
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Error al crear el post');
+          }
+          return res.json();
+        })
+        .then(() => {
+          const modalElem = document.getElementById('editPostModal');
+          const instance = M.Modal.getInstance(modalElem);
+          instance && instance.close();
+          window.location.reload();
+        })
+        .catch(err => {
+          M.toast({html: err.message});
+        });
+      } else {
+        fetch(`/posts/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content, imageUrl: imageUrl || undefined, hashtags })
+        })
+        .then(async (res) => {
+          if(!res.ok){
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.error || 'Error al actualizar el post');
+          }
+          return res.json();
+        })
+        .then(() => {
+          const modalElem = document.getElementById('editPostModal');
+          const instance = M.Modal.getInstance(modalElem);
+          instance && instance.close();
+          window.location.reload();
+        })
+        .catch(err => {
+          M.toast({html: err.message});
+        });
+      }
+
+      return false;
+    }
+  </script>
+</body>
+</html>
